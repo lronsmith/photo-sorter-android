@@ -17,7 +17,8 @@ class MainActivityLaunchTest {
     @Test fun launchesToStartScreenWithProductionContainer() {
         assertTrue(rule.activity.application is PhotoSorterApplication)
         rule.onNodeWithText("Choose albums").assertIsDisplayed()
-        // No media permission granted under Robolectric: the start screen asks for access.
         rule.onNodeWithText("Find duplicates").assertIsDisplayed()
+        // No media permission granted under Robolectric: the start screen asks for access.
+        rule.onNodeWithText("Grant access").assertIsDisplayed()
     }
 }
