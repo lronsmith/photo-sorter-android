@@ -148,7 +148,9 @@ collide.
   rows (items become undecided and reappear in the swipe queue).
 - **Prune** (run when Start loads): delete `TRASHED` rows whose IDs are no
   longer in MediaStore (purged) or are live again (restored elsewhere, e.g.
-  from Samsung Gallery's Recycle bin).
+  from Samsung Gallery's Recycle bin). Prune runs only when the app has full
+  photo access: with "selected photos only" access it is skipped, so items
+  outside the selection aren't forgotten.
 
 ### Reset decisions
 
