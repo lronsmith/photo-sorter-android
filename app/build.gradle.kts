@@ -15,6 +15,16 @@ val signingEnv = listOf(
 ).associateWith { providers.environmentVariable(it).orNull }
 val releaseSigningAvailable = signingEnv.values.all { !it.isNullOrBlank() }
 
+// versionCode: env BUILD_NUMBER (the CI run number), 1 when unset. A set but invalid value fails
+// the build rather than silently giving versionCode 1, which would not install as an update.
+val buildNumber = providers.environmentVariable("BUILD_NUMBER").orNull
+val appVersionCode = if (buildNumber == null) {
+    1
+} else {
+    buildNumber.toIntOrNull()?.takeIf { it > 0 }
+        ?: throw GradleException("BUILD_NUMBER must be a positive integer, but was '$buildNumber'.")
+}
+
 android {
     namespace = "io.github.lronsmith.photosorter"
     compileSdk = 37
@@ -23,7 +33,7 @@ android {
         applicationId = "io.github.lronsmith.photosorter"
         minSdk = 30
         targetSdk = 37
-        versionCode = providers.environmentVariable("BUILD_NUMBER").orNull?.toIntOrNull() ?: 1
+        versionCode = appVersionCode
         versionName = providers.gradleProperty("appVersionName").get()
     }
 
