@@ -7,7 +7,8 @@ Repo: `lronsmith/photo-sorter-android` (new, public). The Windows app
 
 ## Purpose
 
-An Android app, used on the author's Samsung phone, for quickly culling the
+An Android app for anyone with a Samsung phone (it is being built for a
+friend of the author, not for one specific device) for quickly culling the
 photo library that Samsung Gallery shows. Photos and videos appear one at a
 time as full-screen cards:
 
@@ -23,8 +24,10 @@ workflow after a merge to `main`.
 
 ## Success criteria
 
-- Installs on Android 11+ (minSdk 30); targets the author's Samsung (One UI,
-  Android 12+), including Android 14+ "selected photos only" access.
+- Installs on Android 11+ (minSdk 30) and works on any Samsung phone running
+  One UI (other Android phones should work too, but aren't a target),
+  including Android 14+ "selected photos only" access. Users are not assumed
+  to be technical: the README's install steps are written for them.
 - Shows every photo and video from the chosen albums, oldest first by default,
   with a newest-first option.
 - Right / left / up swipes keep / trash / defer; undo reverses swipes one at a
@@ -328,7 +331,7 @@ run `./gradlew test` locally.
 
 Not automated (deliberately): emulator / instrumented tests.
 
-### Manual checklist (README, run on the Samsung for the first release)
+### Manual checklist (README, run on a Samsung phone for the first release)
 
 1. Grant / deny photo access; Android 14 "Selected photos only".
 2. Grant Media management; a left swipe trashes with no dialog.
