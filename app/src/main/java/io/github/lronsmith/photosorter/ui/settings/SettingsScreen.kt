@@ -168,7 +168,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onOpenTrash
         AlertDialog(
             onDismissRequest = { confirmReset = false },
             title = { Text("Reset decisions?") },
-            text = { Text("Kept photos will show up again. Trashed items stay in the trash.") },
+            text = {
+                Text(
+                    "Kept photos will show up again. Trashed items stay in the trash. " +
+                        "Photos waiting to be trashed are put back too.",
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmReset = false
