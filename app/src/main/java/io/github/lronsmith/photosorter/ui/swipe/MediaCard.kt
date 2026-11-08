@@ -1,5 +1,6 @@
 package io.github.lronsmith.photosorter.ui.swipe
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -75,6 +77,8 @@ fun MediaCard(
     }
 }
 
+// PlayerView's resize mode, shutter colour and Compose surface workaround are @UnstableApi.
+@OptIn(UnstableApi::class)
 @Composable
 private fun VideoPlayer(item: MediaItem, muted: Boolean, onToggleMute: () -> Unit, onLoadFailed: () -> Unit) {
     val context = LocalContext.current
