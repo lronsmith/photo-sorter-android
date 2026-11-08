@@ -135,6 +135,17 @@ class StartViewModelTest {
         assertEquals(setOf(2L), decisions.decidedIds())
     }
 
+    @Test fun partialAccessDoesNotPrune() = runTest {
+        access = AccessLevel.PARTIAL
+        cameraAndWa()
+        decisions.set(listOf(1, 2), TRASHED, SWIPE)
+        media.items = media.items.filter { it.id !in setOf(1L, 2L) }
+        media.trashed[2] = TrashedItem(testItem(2), expiresAt = 0)
+        val state = loaded().state.value
+        assertEquals(setOf(1L, 2L), decisions.decidedIds())
+        assertTrue(state.albums.isNotEmpty()) // still loads
+    }
+
     @Test fun pendingBannerAndTrashNow() = runTest {
         cameraAndWa()
         decisions.set(listOf(1, 2), PENDING_TRASH, SWIPE)

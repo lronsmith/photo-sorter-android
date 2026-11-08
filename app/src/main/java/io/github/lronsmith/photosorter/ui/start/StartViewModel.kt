@@ -91,7 +91,9 @@ class StartViewModel(
                 return@launch
             }
             _state.update { it.copy(loading = true, access = access) }
-            trashedRowsLock.withLock {
+            // Only with FULL access: under PARTIAL, trashedItems() can't see trashed items outside the
+            // user's selection, and pruning would forget rows for items that are still in the trash.
+            if (access == AccessLevel.FULL) trashedRowsLock.withLock {
                 val stillTrashed = media.trashedItems(decisions.idsIn(DecisionState.TRASHED)).map { it.item.id }
                 decisions.pruneTrashed(stillTrashed.toSet())
             }
