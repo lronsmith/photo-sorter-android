@@ -1,0 +1,108 @@
+<style>
+  .phones { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
+  .phone { width:270px; height:560px; border-radius:34px; border:8px solid #1b1b1f; background:#0e0f12; overflow:hidden; position:relative; font-family:system-ui,sans-serif; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  .status { height:22px; font-size:10px; display:flex; justify-content:space-between; padding:4px 16px 0; opacity:.8; }
+  .g1{background:linear-gradient(160deg,#f6a65a,#e3654a 40%,#7a3b6b)} .g2{background:linear-gradient(200deg,#86c5d8,#3d7ea6 60%,#1f3d5a)}
+  .g3{background:linear-gradient(140deg,#9ccf7a,#4f8a4b 55%,#23402a)} .g4{background:linear-gradient(120deg,#d8c3f0,#8a6bc4 60%,#3b2a63)}
+  .g5{background:linear-gradient(180deg,#f2e3a0,#c9a24a 60%,#5a4319)} .g6{background:linear-gradient(90deg,#e0e0e0,#9aa3ad 60%,#3c434b)}
+  .lbl { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; opacity:.55; margin:14px 0 6px; }
+  .grp { background:#1a1c21; border-radius:12px; overflow:hidden; }
+  .it { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; font-size:11px; border-bottom:1px solid #24272d; }
+  .it:last-child { border-bottom:none; }
+  .sub { font-size:9px; opacity:.55; }
+  .tog { width:30px; height:16px; border-radius:10px; background:#3a3e46; position:relative; flex:none; }
+  .tog::after { content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#9aa0aa; }
+  .tog.on { background:#20b26b; } .tog.on::after { left:16px; background:#fff; }
+  .dim { opacity:.6; }
+</style>
+
+<h2>Settings + "Trashed by this app" (4 of 4)</h2>
+<p class="subtitle">Covers: photo access status, Media management (instant trash), the Trashed list with Restore, Reset decisions, app version.</p>
+<p class="subtitle" style="opacity:.7">Duplicates: B · Thumbnail strips ✓</p>
+
+<div class="phones">
+
+  <!-- A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="background:none;border:none">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>▮▮ ◔</span></div>
+      <div style="padding:6px 14px">
+        <div style="display:flex;gap:10px;align-items:center"><span>‹</span><b style="font-size:16px">Settings</b></div>
+        <div class="lbl">Permissions</div>
+        <div class="grp">
+          <div class="it"><div>Photo &amp; video access<div class="sub">All photos</div></div><span style="color:#5fe0a0">✓</span></div>
+          <div class="it"><div>Media management<div class="sub">Trash without asking each time</div></div><div class="tog"></div></div>
+        </div>
+        <div class="lbl">Library</div>
+        <div class="grp">
+          <div class="it"><div>Trashed by this app<div class="sub">Restore within ~30 days</div></div><span class="dim">412 ›</span></div>
+        </div>
+        <div class="lbl">Data</div>
+        <div class="grp">
+          <div class="it"><div style="color:#ff7a7a">Reset decisions<div class="sub" style="color:#fff">Show kept photos again</div></div><span class="dim">›</span></div>
+        </div>
+        <div class="lbl">About</div>
+        <div class="grp">
+          <div class="it"><span>Version</span><span class="dim">1.0.0 (build 27)</span></div>
+          <div class="it"><span>Source on GitHub</span><span class="dim">↗</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cardbody"><h3>A · Grouped list</h3><p>Standard Android settings list in sections. "Trashed by this app" opens its own page (a thumbnail grid with Restore / Restore all, like C's right half).</p></div>
+  </div>
+
+  <!-- B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="background:none;border:none">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>▮▮ ◔</span></div>
+      <div style="padding:6px 14px">
+        <div style="display:flex;gap:10px;align-items:center"><span>‹</span><b style="font-size:16px">Settings</b></div>
+        <div style="background:#2a2412;border:1px solid #6b5a22;border-radius:14px;padding:12px;margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px">⚡ Instant trash is off</b><div class="tog"></div></div>
+          <div style="font-size:10px;margin-top:6px;line-height:1.4" class="dim">Without "Media management", left swipes wait in a batch and Android asks once to confirm.</div>
+          <div style="background:#f0c24a;color:#111;font-size:11px;font-weight:700;text-align:center;border-radius:10px;padding:8px;margin-top:10px">Turn on in Android settings</div>
+        </div>
+        <div style="background:#1a1c21;border-radius:14px;padding:12px;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px"><b>Trashed by this app</b><span class="dim">412 ›</span></div>
+          <div style="display:flex;gap:4px;margin-top:8px"><div class="g1" style="flex:1;height:40px;border-radius:6px"></div><div class="g2" style="flex:1;height:40px;border-radius:6px"></div><div class="g3" style="flex:1;height:40px;border-radius:6px"></div><div class="g4" style="flex:1;height:40px;border-radius:6px"></div><div class="g5" style="flex:1;height:40px;border-radius:6px"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:10px"><span class="dim">Oldest purged in 6 days</span><b style="color:#5fe0a0">Restore all</b></div>
+        </div>
+        <div style="background:#1a1c21;border-radius:14px;padding:12px;margin-top:10px;font-size:11px;display:flex;justify-content:space-between"><span>Photo &amp; video access</span><span style="color:#5fe0a0">All photos ✓</span></div>
+        <div style="border:1px solid #5a2a2a;border-radius:14px;padding:12px;margin-top:10px;font-size:11px">
+          <b style="color:#ff7a7a">Reset decisions</b><div class="sub" style="margin-top:2px">864 kept photos will appear again</div>
+        </div>
+        <div style="text-align:center;font-size:9px;margin-top:14px" class="dim">v1.0.0 (build 27) · GitHub ↗</div>
+      </div>
+    </div>
+    <div class="cardbody"><h3>B · Status cards</h3><p>Cards ordered by importance: a highlighted card when instant trash is off (disappears once on), a Trashed card with a thumbnail preview and Restore all, then access status and a danger-zone Reset.</p></div>
+  </div>
+
+  <!-- C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="background:none;border:none">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>▮▮ ◔</span></div>
+      <div style="padding:6px 14px">
+        <div style="display:flex;gap:10px;align-items:center"><span>‹</span><b style="font-size:16px">Settings</b></div>
+        <div style="display:flex;background:#1a1c21;border-radius:10px;padding:3px;font-size:11px;margin-top:10px">
+          <div style="flex:1;text-align:center;padding:6px" class="dim">General</div>
+          <div style="flex:1;text-align:center;padding:6px;background:#fff;color:#111;border-radius:8px;font-weight:600">Trashed · 412</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin:10px 0 6px"><span class="dim">Tap to select · auto-deleted after ~30 days</span><b>Select all</b></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">
+          <div class="g1" style="height:72px;border-radius:6px;position:relative;outline:2px solid #fff"><span style="position:absolute;top:4px;right:4px;font-size:9px;background:#fff;color:#111;border-radius:50%;width:14px;height:14px;text-align:center">✓</span><span style="position:absolute;bottom:3px;left:4px;font-size:8px">6d</span></div>
+          <div class="g2" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">9d</span></div>
+          <div class="g3" style="height:72px;border-radius:6px;position:relative;outline:2px solid #fff"><span style="position:absolute;top:4px;right:4px;font-size:9px;background:#fff;color:#111;border-radius:50%;width:14px;height:14px;text-align:center">✓</span><span style="position:absolute;bottom:3px;left:4px;font-size:8px">12d</span></div>
+          <div class="g4" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">15d</span></div>
+          <div class="g5" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">21d</span></div>
+          <div class="g6" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">22d</span></div>
+          <div class="g2" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">25d</span></div>
+          <div class="g1" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">27d</span></div>
+          <div class="g3" style="height:72px;border-radius:6px;position:relative"><span style="position:absolute;bottom:3px;left:4px;font-size:8px">29d</span></div>
+        </div>
+      </div>
+      <div style="position:absolute;left:14px;right:14px;bottom:20px;background:#20b26b;color:#fff;font-weight:700;text-align:center;border-radius:14px;padding:12px;font-size:13px">Restore 2 selected</div>
+    </div>
+    <div class="cardbody"><h3>C · Two tabs</h3><p>Settings split into "General" (permissions, reset, version — a simple list) and "Trashed", shown here: a grid with days-until-purged on each tile, multi-select, and a Restore button.</p></div>
+  </div>
+
+</div>
