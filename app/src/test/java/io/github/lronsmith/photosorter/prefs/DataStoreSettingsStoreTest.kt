@@ -25,6 +25,7 @@ class DataStoreSettingsStoreTest {
             storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {
                 tmpFolder.root.resolve("s.preferences_pb").toOkioPath()
             },
+            corruptionHandler = settingsCorruptionHandler(), // as in production
             scope = backgroundScope,
         ),
     )
@@ -38,6 +39,14 @@ class DataStoreSettingsStoreTest {
         val s = store()
         s.setAlbumIncluded("wa", false); s.setAlbumIncluded("dl", false); s.setAlbumIncluded("wa", true)
         assertEquals(setOf("dl"), s.excludedAlbumIds.first())
+    }
+
+    @Test fun corruptFileIsReplacedWithDefaults() = runTest {
+        tmpFolder.root.resolve("s.preferences_pb").writeBytes(byteArrayOf(0x7f, 0x7f, 0x7f)) // not a preferences proto
+        val s = store()
+        assertEquals(SortOrder.OLDEST_FIRST, s.order.first())
+        s.setOrder(SortOrder.NEWEST_FIRST) // a toggle must not crash
+        assertEquals(SortOrder.NEWEST_FIRST, s.order.first())
     }
 
     @Test fun orderPersists() = runTest {
