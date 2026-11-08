@@ -22,6 +22,10 @@ interface DecisionStore {
     /** Deletes every KEPT and PENDING_TRASH row; TRASHED rows stay (they back the Trashed list). */
     suspend fun resetKeptAndPending()
 
-    /** Deletes TRASHED rows whose id is not in [stillTrashed]; other states are untouched. */
-    suspend fun pruneTrashed(stillTrashed: Set<Long>)
+    /**
+     * Deletes the TRASHED rows whose id is in [checked] (the TRASHED ids the caller looked up)
+     * but not in [stillTrashed]. Rows in other states, and TRASHED rows written after the
+     * caller's snapshot, are untouched.
+     */
+    suspend fun pruneTrashed(checked: Collection<Long>, stillTrashed: Set<Long>)
 }

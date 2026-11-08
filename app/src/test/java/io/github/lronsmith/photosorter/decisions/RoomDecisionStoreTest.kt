@@ -71,8 +71,18 @@ class RoomDecisionStoreTest {
 
     @Test fun pruneTrashedOnlyTouchesTrashedRows() = runTest {
         store.set(listOf(1, 2), TRASHED, SWIPE); store.set(listOf(3), KEPT, SWIPE)
-        store.pruneTrashed(setOf(2))
+        store.pruneTrashed(checked = listOf(1, 2, 3), stillTrashed = setOf(2))
         assertEquals(setOf(2L, 3L), store.decidedIds())
+    }
+
+    @Test fun pruneTrashedSparesRowsWrittenAfterTheSnapshot() = runTest {
+        store.set(listOf(1, 2), TRASHED, SWIPE)
+        val checked = store.idsIn(TRASHED)
+        store.set(listOf(3), TRASHED, SWIPE) // trashed by the swipe worker after the snapshot
+        store.set(listOf(1), KEPT, SWIPE) // checked, but no longer TRASHED
+        store.pruneTrashed(checked, stillTrashed = emptySet())
+        assertEquals(listOf(3L), store.idsIn(TRASHED))
+        assertEquals(listOf(1L), store.idsIn(KEPT))
     }
 
     @Test fun clearRemovesRows() = runTest {
@@ -90,7 +100,7 @@ class RoomDecisionStoreTest {
         val ids = (1L..2_000L).toList()
         store.set(ids, TRASHED, SWIPE)
         assertEquals(DecisionCounts(0, 0, 2_000), store.observeCounts().first())
-        store.pruneTrashed(ids.drop(500).toSet())
+        store.pruneTrashed(ids, ids.drop(500).toSet())
         assertEquals(1_500, store.idsIn(TRASHED).size)
         store.clear(ids)
         assertTrue(store.decidedIds().isEmpty())

@@ -14,6 +14,7 @@ import io.github.lronsmith.photosorter.model.SortOrder
 import io.github.lronsmith.photosorter.prefs.SettingsStore
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import io.github.lronsmith.photosorter.trash.Trasher
+import io.github.lronsmith.photosorter.trash.trashVerified
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,12 +68,6 @@ class StartViewModel(
     /** Settings writes run in call order, and a refresh reads settings only after earlier writes land. */
     private val settingsLock = Mutex()
 
-    /**
-     * Prune reads TRASHED ids then deletes the rows it did not find in the trash; a trash-now write
-     * landing in between would be deleted, so the two never interleave.
-     */
-    private val trashedRowsLock = Mutex()
-
     private var refreshJob: Job? = null
     private var trashJob: Job? = null
 
@@ -93,9 +88,12 @@ class StartViewModel(
             _state.update { it.copy(loading = true, access = access) }
             // Only with FULL access: under PARTIAL, trashedItems() can't see trashed items outside the
             // user's selection, and pruning would forget rows for items that are still in the trash.
-            if (access == AccessLevel.FULL) trashedRowsLock.withLock {
-                val stillTrashed = media.trashedItems(decisions.idsIn(DecisionState.TRASHED)).map { it.item.id }
-                decisions.pruneTrashed(stillTrashed.toSet())
+            // Prune deletes only rows it checked: a TRASHED row written meanwhile (by trash-now or
+            // the app-scoped swipe worker) is not in the snapshot, so it survives.
+            if (access == AccessLevel.FULL) {
+                val checked = decisions.idsIn(DecisionState.TRASHED)
+                val stillTrashed = media.trashedItems(checked).mapTo(HashSet()) { it.item.id }
+                decisions.pruneTrashed(checked, stillTrashed)
             }
             setItems(media.allItems())
             reloadDecisions()
@@ -116,18 +114,17 @@ class StartViewModel(
         persist { settings.setOrder(order) }
     }
 
-    /** Trashes every visible PENDING_TRASH item; only items whose chunk succeeded become TRASHED. */
+    /** Trashes every visible PENDING_TRASH item; only items now in the system trash become TRASHED. */
     fun onTrashPending(launcher: RequestLauncher) {
         if (trashJob?.isActive == true) return
         trashJob = viewModelScope.launch {
             val pending = decisions.idsIn(DecisionState.PENDING_TRASH).mapNotNull { itemsById[it] }
             if (pending.isEmpty()) return@launch
-            val done = trasher.trash(pending, launcher)
+            val done = trasher.trashVerified(pending, launcher, media)
             if (done.isNotEmpty()) {
                 val doneIds = done.map { it.id }.toSet()
-                trashedRowsLock.withLock { decisions.set(doneIds, DecisionState.TRASHED, DecisionSource.SWIPE) }
+                decisions.set(doneIds, DecisionState.TRASHED, DecisionSource.SWIPE)
                 setItems(itemsById.values.filter { it.id !in doneIds }) // no longer live
-
             }
             reloadDecisions()
             publish()

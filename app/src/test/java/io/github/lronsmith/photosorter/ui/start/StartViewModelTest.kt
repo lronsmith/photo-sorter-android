@@ -135,6 +135,16 @@ class StartViewModelTest {
         assertEquals(setOf(2L), decisions.decidedIds())
     }
 
+    @Test fun pruneSparesRowTrashedDuringTheCheck() = runTest {
+        cameraAndWa()
+        decisions.set(listOf(1), TRASHED, SWIPE)
+        media.items = media.items.filter { it.id != 1L }
+        // The app-scoped swipe worker records 3 as TRASHED while Start is asking MediaStore.
+        media.duringTrashCheck = { decisions.set(listOf(3), TRASHED, SWIPE) }
+        loaded()
+        assertEquals(listOf(3L), decisions.idsIn(TRASHED))
+    }
+
     @Test fun partialAccessDoesNotPrune() = runTest {
         access = AccessLevel.PARTIAL
         cameraAndWa()
@@ -174,6 +184,35 @@ class StartViewModelTest {
         assertNull(vm.state.value.message)
     }
 
+    @Test fun trashNowRecordsUnconfirmedItemsFoundInTheSystemTrash() = runTest {
+        cameraAndWa()
+        decisions.set(listOf(1, 2), PENDING_TRASH, SWIPE)
+        trasher.trashResult = { emptyList() } // e.g. the launcher failed after the system trashed 2
+        media.trashed[2] = TrashedItem(testItem(2), expiresAt = 0)
+        val vm = loaded()
+        vm.onTrashPending(ok)
+        advanceUntilIdle()
+        assertEquals(listOf(2L), decisions.idsIn(TRASHED))
+        assertEquals(SWIPE, decisions.rows.getValue(2).source)
+        assertEquals(listOf(1L), decisions.idsIn(PENDING_TRASH))
+        assertEquals(1, vm.state.value.pendingCount)
+        assertEquals("Some items weren't trashed. They're still waiting.", vm.state.value.message)
+    }
+
+    @Test fun trashNowWithEveryItemFoundInTheSystemTrashSucceeds() = runTest {
+        cameraAndWa()
+        decisions.set(listOf(1, 2), PENDING_TRASH, SWIPE)
+        trasher.trashResult = { emptyList() }
+        media.trashed[1] = TrashedItem(testItem(1), expiresAt = 0)
+        media.trashed[2] = TrashedItem(testItem(2), expiresAt = 0)
+        val vm = loaded()
+        vm.onTrashPending(ok)
+        advanceUntilIdle()
+        assertEquals(listOf(1L, 2L), decisions.idsIn(TRASHED))
+        assertEquals(0, vm.state.value.pendingCount)
+        assertNull(vm.state.value.message)
+    }
+
     @Test fun partialAccessStillLoads() = runTest {
         access = AccessLevel.PARTIAL
         cameraAndWa()
@@ -183,16 +222,23 @@ class StartViewModelTest {
         assertEquals(4, state.queueCount)
     }
 
-    /** [FakeMediaSource] that counts [allItems] calls. */
+    /** [FakeMediaSource] that counts [allItems] calls and runs [duringTrashCheck] inside [trashedItems]. */
     private class CountingMediaSource(private val inner: FakeMediaSource = FakeMediaSource()) :
         MediaSource by inner {
         var allItemsCalls = 0
         var items: List<MediaItem> by inner::items
         val trashed get() = inner.trashed
+        var duringTrashCheck: suspend () -> Unit = {}
 
         override suspend fun allItems(): List<MediaItem> {
             allItemsCalls++
             return inner.allItems()
+        }
+
+        override suspend fun trashedItems(ids: Collection<Long>): List<TrashedItem> {
+            val result = inner.trashedItems(ids)
+            duringTrashCheck()
+            return result
         }
     }
 }
