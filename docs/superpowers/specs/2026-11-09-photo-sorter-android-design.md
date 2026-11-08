@@ -243,7 +243,10 @@ pinned green "Restore N selected" button; empty state "Nothing in the trash".
 - New public repo `lronsmith/photo-sorter-android`, MIT licence.
 - `.gitignore` includes `*.jks`, `*.keystore`, `key.properties`,
   `local.properties`, `build/`, `.gradle/`, `.idea/`, `.superpowers/`.
-- Commits use the author's GitHub noreply email (already configured).
+- Commits use the author's GitHub noreply email, set in this repo's **local**
+  git config (the global config holds a personal address). Every task that
+  commits verifies `git config user.email` first; before the first push,
+  `git log --all --format='%ae %ce'` must show only the noreply address.
 - Enable secret scanning + push protection.
 - Actions: require approval for workflow runs from all outside contributors'
   fork PRs.
