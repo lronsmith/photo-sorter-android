@@ -30,6 +30,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -44,9 +47,9 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 
 /**
  * The media inside a swipe card, fitted (letterboxed) on a dark background. Images load with
- * Coil; videos autoplay on a loop, muted per [muted], and a tap calls [onToggleMute]. A failed
- * load or playback calls [onLoadFailed]. When [undecodable] is set, a placeholder with the file
- * name is shown instead.
+ * Coil; videos autoplay on a loop while the screen is started (paused in the background), muted
+ * per [muted], and a tap calls [onToggleMute]. A failed load or playback calls [onLoadFailed].
+ * When [undecodable] is set, a placeholder with the file name is shown instead.
  */
 @Composable
 fun MediaCard(
@@ -75,27 +78,32 @@ fun MediaCard(
 @Composable
 private fun VideoPlayer(item: MediaItem, muted: Boolean, onToggleMute: () -> Unit, onLoadFailed: () -> Unit) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentMuted by rememberUpdatedState(muted)
     val currentOnLoadFailed by rememberUpdatedState(onLoadFailed)
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
 
     // Created in an effect (not in remember) so an abandoned composition can't leak a player.
     // No audio focus handling (the default): a muted autoplay must not pause the user's music.
-    DisposableEffect(context, item.id, item.kind) {
+    DisposableEffect(context, lifecycle, item.id, item.kind) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) = currentOnLoadFailed()
         }
         val created = ExoPlayer.Builder(context).build().apply {
             volume = if (currentMuted) 0f else 1f
             repeatMode = Player.REPEAT_MODE_ONE
-            playWhenReady = true
             addListener(listener)
             setMediaItem(PlayerMediaItem.fromUri(item.contentUri()))
             prepare()
         }
+        // Autoplay only while the screen is started: adding the observer to a started lifecycle
+        // delivers ON_START at once, so playback begins now or when the app returns.
+        val lifecycleObserver = playWhileStarted { created.playWhenReady = it }
+        lifecycle.addObserver(lifecycleObserver)
         player = created
         onDispose {
             player = null
+            lifecycle.removeObserver(lifecycleObserver)
             created.removeListener(listener)
             created.release()
         }
@@ -131,6 +139,15 @@ private fun VideoPlayer(item: MediaItem, muted: Boolean, onToggleMute: () -> Uni
                     onClick = onToggleMute,
                 ),
         )
+    }
+}
+
+/** Calls [setPlaying] with `true` on ON_START and `false` on ON_STOP (Home, app switch, screen off). */
+internal fun playWhileStarted(setPlaying: (Boolean) -> Unit) = LifecycleEventObserver { _, event ->
+    when (event) {
+        Lifecycle.Event.ON_START -> setPlaying(true)
+        Lifecycle.Event.ON_STOP -> setPlaying(false)
+        else -> Unit
     }
 }
 
