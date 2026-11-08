@@ -11,10 +11,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 defaults:
   run:
     shell: bash
@@ -24,7 +20,12 @@ jobs:
     name: Build, sign and publish
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    # Holds the signing secrets; its deployment branch policy allows only main.
+    # Job-level, so skipped runs (CI failed, or not a push) never queue behind or replace a real release.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    # The job's if: (a successful CI run for a push to main) is the real gate. This environment
+    # holds the signing secrets; its main-only branch policy is defence in depth.
     environment: release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
