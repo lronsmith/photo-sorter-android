@@ -44,7 +44,8 @@ class FakeDecisionStore(private val clock: () -> Long = { 0L }) : DecisionStore 
         state.update { rows -> rows.filterValues { it.state == DecisionState.TRASHED } }
     }
 
-    override suspend fun pruneTrashed(stillTrashed: Set<Long>) {
-        state.update { rows -> rows.filterValues { it.state != DecisionState.TRASHED || it.mediaId in stillTrashed } }
+    override suspend fun pruneTrashed(checked: Collection<Long>, stillTrashed: Set<Long>) {
+        val gone = checked.toSet() - stillTrashed
+        state.update { rows -> rows.filterValues { it.state != DecisionState.TRASHED || it.mediaId !in gone } }
     }
 }

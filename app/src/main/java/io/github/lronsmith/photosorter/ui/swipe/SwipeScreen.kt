@@ -63,6 +63,7 @@ import io.github.lronsmith.photosorter.model.MediaKind
 import io.github.lronsmith.photosorter.model.contentUri
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import io.github.lronsmith.photosorter.trash.rememberRequestLauncher
+import io.github.lronsmith.photosorter.ui.plural
 import io.github.lronsmith.photosorter.ui.theme.PsColors
 import java.time.Instant
 import java.time.ZoneId
@@ -254,7 +255,7 @@ private fun BoxScope.BottomOverlay(
                     text = "🗑 ${state.pendingCount}",
                     onClick = onTrashPending,
                     color = PsColors.Trash.copy(alpha = 0.85f),
-                    description = "Trash ${state.pendingCount} waiting items",
+                    description = "Trash ${plural(state.pendingCount, "waiting item", "waiting items")}",
                 )
             }
         }

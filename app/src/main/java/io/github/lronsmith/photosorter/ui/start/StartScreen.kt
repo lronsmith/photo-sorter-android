@@ -79,6 +79,7 @@ import io.github.lronsmith.photosorter.media.MediaAccess
 import io.github.lronsmith.photosorter.model.SortOrder
 import io.github.lronsmith.photosorter.model.contentUri
 import io.github.lronsmith.photosorter.trash.rememberRequestLauncher
+import io.github.lronsmith.photosorter.ui.plural
 import io.github.lronsmith.photosorter.ui.theme.PsColors
 
 private val TileShape = RoundedCornerShape(12.dp)
@@ -190,7 +191,8 @@ private fun Header(state: StartUiState, onOpenSettings: () -> Unit) {
             )
             if (state.access != AccessLevel.NONE && (!state.loading || state.albums.isNotEmpty())) {
                 Text(
-                    "${state.selectedAlbums} of ${state.albums.size} selected · ${state.queueCount} photos & videos",
+                    "${state.selectedAlbums} of ${state.albums.size} selected · " +
+                        plural(state.queueCount, "photo or video", "photos & videos"),
                     color = PsColors.OnSurfaceDim,
                     fontSize = 13.sp,
                 )

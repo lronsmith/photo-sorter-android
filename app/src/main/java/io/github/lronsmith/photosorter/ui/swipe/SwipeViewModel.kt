@@ -13,6 +13,7 @@ import io.github.lronsmith.photosorter.queue.SwipeAction
 import io.github.lronsmith.photosorter.queue.SwipeQueue
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import io.github.lronsmith.photosorter.trash.Trasher
+import io.github.lronsmith.photosorter.trash.trashVerified
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
-/** What the swipe screen shows; [upcoming] are the next 2 items (preloaded). */
+/**
+ * What the swipe screen shows; [upcoming] are the next 2 items (preloaded). [sessionTrashed]
+ * counts items this session actually moved to the system trash; pending ones are in [pendingCount].
+ */
 data class SwipeUiState(
     val loading: Boolean = true,
     val current: MediaItem? = null,
@@ -78,7 +82,10 @@ class SwipeViewModel(
     /** The whole library at load time, by id (pending items from any album may be trashed); null until loaded. */
     private val library = MutableStateFlow<Map<Long, MediaItem>?>(null)
 
-    /** Ids this session moved to the system trash; undoing their swipe needs a restore. */
+    /**
+     * Ids this session moved to the system trash, net of undo; undoing their swipe needs a restore.
+     * Its size is the session's "trashed" count: pending items aren't trashed yet.
+     */
     private val trashedThisSession = mutableSetOf<Long>()
 
     /** An undo of a trash swipe is waiting for its job; swipes and further undos are ignored. */
@@ -86,7 +93,6 @@ class SwipeViewModel(
     private var pendingCount = 0
     private var undecodable = emptySet<Long>()
     private var sessionKept = 0
-    private var sessionTrashed = 0
     private var message: String? = null
 
     init {
@@ -131,7 +137,6 @@ class SwipeViewModel(
                 submit { decisions.set(listOf(it.item.id), DecisionState.KEPT, DecisionSource.SWIPE) }
             }
             SwipeDirection.LEFT -> queue.trash().also {
-                sessionTrashed++
                 decidedThisSession += it.item.id
                 submitTrash(it.item, launcher)
             }
@@ -208,30 +213,17 @@ class SwipeViewModel(
             return
         }
         submit {
-            val trashed = trashAndVerify(listOf(item), launcher).isNotEmpty()
+            val trashed = trasher.trashVerified(listOf(item), launcher, media).isNotEmpty()
             if (trashed) {
                 decisions.set(listOf(item.id), DecisionState.TRASHED, DecisionSource.SWIPE)
                 trashedThisSession += item.id
+                publish()
             } else {
                 decisions.set(listOf(item.id), DecisionState.PENDING_TRASH, DecisionSource.SWIPE)
                 message = INSTANT_FAILED_MESSAGE
                 publish()
             }
         }
-    }
-
-    /**
-     * Trashes [items] and returns the ones now in the system trash. Items whose request reported
-     * failure are checked against MediaStore: after the screen closes the launcher fails even if
-     * the system already trashed the item.
-     */
-    private suspend fun trashAndVerify(items: List<MediaItem>, launcher: RequestLauncher): List<MediaItem> {
-        val reported = trasher.trash(items, launcher)
-        if (reported.size == items.size) return reported
-        val reportedIds = reported.mapTo(HashSet()) { it.id }
-        val unconfirmed = items.filter { it.id !in reportedIds }
-        val inTrash = media.trashedItems(unconfirmed.map { it.id }).mapTo(HashSet()) { it.item.id }
-        return reported + unconfirmed.filter { it.id in inTrash }
     }
 
     /** Runs after every earlier job, so an instant trash of the item has finished by now. */
@@ -249,7 +241,6 @@ class SwipeViewModel(
         }
         decisions.clear(listOf(item.id))
         undoing = false
-        sessionTrashed--
         commitUndo(action)
     }
 
@@ -258,11 +249,12 @@ class SwipeViewModel(
         // Pending ids outside the loaded library aren't counted in the chip and can't be trashed now.
         val items = decisions.idsIn(DecisionState.PENDING_TRASH).mapNotNull { lib[it] }
         if (items.isEmpty()) return
-        val trashed = trashAndVerify(items, launcher)
+        val trashed = trasher.trashVerified(items, launcher, media)
         if (trashed.isNotEmpty()) {
             val trashedIds = trashed.map { it.id }
             decisions.set(trashedIds, DecisionState.TRASHED, DecisionSource.SWIPE)
             trashedThisSession += trashedIds
+            publish()
         }
         if (trashed.size < items.size) {
             message = BATCH_FAILED_MESSAGE
@@ -293,7 +285,7 @@ class SwipeViewModel(
             undecodable = undecodable,
             done = loaded && queue.current == null,
             sessionKept = sessionKept,
-            sessionTrashed = sessionTrashed,
+            sessionTrashed = trashedThisSession.size,
             message = message,
         )
     }

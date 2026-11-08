@@ -61,6 +61,7 @@ import io.github.lronsmith.photosorter.dupes.ScanProgress
 import io.github.lronsmith.photosorter.model.MediaItem
 import io.github.lronsmith.photosorter.model.contentUri
 import io.github.lronsmith.photosorter.trash.rememberRequestLauncher
+import io.github.lronsmith.photosorter.ui.plural
 import io.github.lronsmith.photosorter.ui.theme.PsColors
 import kotlinx.coroutines.launch
 
@@ -126,7 +127,7 @@ fun DuplicatesScreen(viewModel: DuplicatesViewModel, onBack: () -> Unit) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .height(52.dp),
-                ) { Text("Trash ${results.copiesToTrash} copies", fontWeight = FontWeight.Bold) }
+                ) { Text("Trash ${plural(results.copiesToTrash, "copy", "copies")}", fontWeight = FontWeight.Bold) }
             }
         },
     ) { padding ->
@@ -171,7 +172,7 @@ private fun ScanningContent(progress: ScanProgress?, onCancel: () -> Unit, modif
                 )
             }
             if (progress != null) {
-                Text("${progress.filesDone} of ${progress.filesTotal} files")
+                Text("${progress.filesDone} of ${plural(progress.filesTotal, "file", "files")}")
                 Text(
                     "${Formatter.formatShortFileSize(context, progress.bytesDone)} of " +
                         Formatter.formatShortFileSize(context, progress.bytesTotal),
@@ -211,7 +212,7 @@ private fun ResultsContent(
                         fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
-                        "${results.copiesToTrash} copies · ${results.groups.size} groups",
+                        "${plural(results.copiesToTrash, "copy", "copies")} · ${plural(results.groups.size, "group", "groups")}",
                         color = PsColors.OnSurfaceDim,
                         modifier = Modifier.padding(bottom = 5.dp),
                     )
@@ -234,7 +235,7 @@ private fun ResultsContent(
 @Composable
 private fun UnreadableNote(count: Int) {
     if (count > 0) {
-        Text("$count files couldn't be read", color = PsColors.Warn, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        Text("${plural(count, "file", "files")} couldn't be read", color = PsColors.Warn, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

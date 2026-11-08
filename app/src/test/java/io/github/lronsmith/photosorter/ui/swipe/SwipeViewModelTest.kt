@@ -119,7 +119,21 @@ class SwipeViewModelTest {
         assertEquals(PENDING_TRASH, decisions.rows.getValue(1).state)
         assertEquals(1, vm.ui.pendingCount)
         assertTrue(trasher.trashCalls.isEmpty())
-        assertEquals(1, vm.ui.sessionTrashed)
+        assertEquals(0, vm.ui.sessionTrashed) // waiting, not trashed yet
+    }
+
+    @Test fun sessionTrashedCountsOnlyItemsActuallyTrashed() = runTest {
+        val vm = loaded()
+        repeat(5) { vm.onSwipe(LEFT, ok) }
+        advanceUntilIdle()
+        assertTrue(vm.ui.done)
+        assertEquals(0, vm.ui.sessionTrashed) // "0 trashed · 5 pending", not "5 trashed · 5 pending"
+        assertEquals(5, vm.ui.pendingCount)
+
+        trasher.trashResult = { it.take(3) }
+        vm.onTrashPending(ok); advanceUntilIdle()
+        assertEquals(3, vm.ui.sessionTrashed)
+        assertEquals(2, vm.ui.pendingCount)
     }
 
     @Test fun leftInstantTrashes() = runTest {
@@ -140,6 +154,7 @@ class SwipeViewModelTest {
         assertEquals(PENDING_TRASH, decisions.rows.getValue(1).state)
         assertEquals(1, vm.ui.pendingCount)
         assertEquals("Couldn't trash that item. It's waiting in the batch.", vm.ui.message)
+        assertEquals(0, vm.ui.sessionTrashed)
     }
 
     @Test fun rapidInstantTrashesAreSerializedAndAllRecorded() = runTest {
@@ -151,6 +166,7 @@ class SwipeViewModelTest {
         advanceUntilIdle()
         assertEquals(listOf(listOf(1L)), trasher.trashCalls) // the others wait their turn
         assertTrue(vm.ui.done)
+        assertEquals(0, vm.ui.sessionTrashed) // none confirmed yet
 
         gate.complete(Unit); advanceUntilIdle()
         assertEquals((1L..5).map { listOf(it) }, trasher.trashCalls)
@@ -250,10 +266,12 @@ class SwipeViewModelTest {
         vm.onSwipe(LEFT, ok)
         vm.onTrashPending(ok); advanceUntilIdle()
         assertEquals(TRASHED, decisions.rows.getValue(1).state)
+        assertEquals(1, vm.ui.sessionTrashed)
         vm.onUndo(ok); advanceUntilIdle()
         assertEquals(listOf(listOf(1L)), trasher.restoreCalls)
         assertTrue(decisions.rows.isEmpty())
         assertEquals(1L, vm.ui.current?.id)
+        assertEquals(0, vm.ui.sessionTrashed)
     }
 
     @Test fun loadFailedMissingItemIsDropped() = runTest {
@@ -279,7 +297,9 @@ class SwipeViewModelTest {
         advanceUntilIdle()
         assertTrue(vm.ui.done)
         assertNull(vm.ui.current)
-        assertEquals(5, vm.ui.sessionKept + vm.ui.sessionTrashed)
+        // Batch mode: the two left swipes are pending, not trashed.
+        assertEquals(3, vm.ui.sessionKept)
+        assertEquals(0, vm.ui.sessionTrashed)
         assertEquals(5, vm.ui.decided)
         assertEquals(2, vm.ui.pendingCount)
     }

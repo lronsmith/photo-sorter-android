@@ -30,6 +30,9 @@ interface DecisionDao {
     @Query("DELETE FROM decisions WHERE mediaId IN (:mediaIds)")
     suspend fun delete(mediaIds: List<Long>)
 
+    @Query("DELETE FROM decisions WHERE state = 'TRASHED' AND mediaId IN (:mediaIds)")
+    suspend fun deleteTrashed(mediaIds: List<Long>)
+
     @Query("DELETE FROM decisions WHERE state IN ('KEPT', 'PENDING_TRASH')")
     suspend fun deleteKeptAndPending()
 }

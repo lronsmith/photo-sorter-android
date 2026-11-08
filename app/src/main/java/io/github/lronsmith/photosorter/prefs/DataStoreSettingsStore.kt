@@ -2,6 +2,7 @@ package io.github.lronsmith.photosorter.prefs
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -15,7 +16,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-private val Context.settingsPreferences: DataStore<Preferences> by preferencesDataStore(name = "settings")
+/** A corrupt settings file is replaced with the defaults; without this every write would throw. */
+internal fun settingsCorruptionHandler() = ReplaceFileCorruptionHandler { emptyPreferences() }
+
+private val Context.settingsPreferences: DataStore<Preferences> by preferencesDataStore(
+    name = "settings",
+    corruptionHandler = settingsCorruptionHandler(),
+)
 
 /** The app-wide settings DataStore (one instance per process). */
 fun Context.settingsDataStore(): DataStore<Preferences> = settingsPreferences

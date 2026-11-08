@@ -18,8 +18,12 @@
         android:name="android.permission.WAKE_LOCK"
         tools:node="remove" />
 
+    <!-- No backup or device transfer: decisions are keyed by MediaStore ids, which differ on a new phone. -->
     <application
         android:name=".PhotoSorterApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="Photo Sorter"
         android:roundIcon="@mipmap/ic_launcher_round"

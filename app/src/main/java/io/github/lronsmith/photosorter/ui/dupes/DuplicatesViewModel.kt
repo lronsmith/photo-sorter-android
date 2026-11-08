@@ -11,6 +11,7 @@ import io.github.lronsmith.photosorter.dupes.ScanProgress
 import io.github.lronsmith.photosorter.media.MediaSource
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import io.github.lronsmith.photosorter.trash.Trasher
+import io.github.lronsmith.photosorter.trash.trashVerified
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -93,9 +94,9 @@ class DuplicatesViewModel(
     }
 
     /**
-     * Trashes every non-keeper of every group in one request. Copies that were trashed are
-     * recorded as TRASHED (source DUPLICATE) and leave the list; a group whose copies are all
-     * gone except its keeper is dropped.
+     * Trashes every non-keeper of every group in one request. Copies now in the system trash
+     * are recorded as TRASHED (source DUPLICATE) and leave the list; a group whose copies are
+     * all gone except its keeper is dropped.
      */
     fun trashAll(launcher: RequestLauncher) {
         val results = _state.value as? DuplicatesUiState.Results ?: return
@@ -103,7 +104,7 @@ class DuplicatesViewModel(
         _state.value = results.copy(trashing = true, message = null)
         viewModelScope.launch {
             val nonKeepers = results.groups.flatMap { group -> group.copies.filter { it.id != group.keeperId } }
-            val trashedIds = trasher.trash(nonKeepers, launcher).mapTo(HashSet()) { it.id }
+            val trashedIds = trasher.trashVerified(nonKeepers, launcher, media).mapTo(HashSet()) { it.id }
             if (trashedIds.isNotEmpty()) {
                 decisions.set(trashedIds, DecisionState.TRASHED, DecisionSource.DUPLICATE)
             }

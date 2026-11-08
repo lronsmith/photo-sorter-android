@@ -7,6 +7,7 @@ import io.github.lronsmith.photosorter.fakes.FakeMediaSource
 import io.github.lronsmith.photosorter.fakes.FakeTrasher
 import io.github.lronsmith.photosorter.fakes.testItem
 import io.github.lronsmith.photosorter.media.MediaSource
+import io.github.lronsmith.photosorter.media.TrashedItem
 import io.github.lronsmith.photosorter.model.MediaItem
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import kotlinx.coroutines.CompletableDeferred
@@ -184,6 +185,27 @@ class DuplicatesViewModelTest {
 
         vm.onMessageShown()
         assertNull((vm.state.value as DuplicatesUiState.Results).message)
+    }
+
+    @Test fun unconfirmedCopiesFoundInTheSystemTrashAreRecorded() = runTest(dispatcher) {
+        add(1, byteArrayOf(1, 1))
+        add(2, byteArrayOf(1, 1))
+        add(3, byteArrayOf(2, 2, 2))
+        add(4, byteArrayOf(2, 2, 2))
+        add(5, byteArrayOf(2, 2, 2))
+        trasher.trashResult = { emptyList() } // e.g. the launcher failed after the system trashed 4
+        media.trashed[4] = TrashedItem(testItem(4), expiresAt = 0)
+        val (vm, _) = scanned()
+
+        vm.trashAll(launcher)
+        advanceUntilIdle()
+
+        assertEquals(setOf(4L), decisions.rows.keys)
+        assertEquals(DecisionState.TRASHED, decisions.rows.getValue(4).state)
+        assertEquals(DecisionSource.DUPLICATE, decisions.rows.getValue(4).source)
+        val after = vm.state.value as DuplicatesUiState.Results
+        assertEquals(listOf(listOf(1L, 2L), listOf(3L, 5L)), after.groups.map { g -> g.copies.map { it.id } }.sortedBy { it.first() })
+        assertEquals("Some copies weren't trashed.", after.message)
     }
 
     @Test fun unreadableCountSurfaced() = runTest(dispatcher) {

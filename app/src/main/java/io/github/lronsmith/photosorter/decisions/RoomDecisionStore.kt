@@ -36,11 +36,10 @@ class RoomDecisionStore(
 
     override suspend fun resetKeptAndPending() = dao.deleteKeptAndPending()
 
-    override suspend fun pruneTrashed(stillTrashed: Set<Long>) {
-        // stillTrashed can be the whole library: too many ids for a NOT IN (...) clause.
-        db.withTransaction {
-            deleteChunked(dao.idsIn(DecisionState.TRASHED).filterNot { it in stillTrashed })
-        }
+    override suspend fun pruneTrashed(checked: Collection<Long>, stillTrashed: Set<Long>) {
+        val gone = checked.filterNot { it in stillTrashed }
+        if (gone.isEmpty()) return
+        db.withTransaction { gone.chunked(CHUNK).forEach { dao.deleteTrashed(it) } }
     }
 
     private suspend fun deleteChunked(mediaIds: Collection<Long>) {

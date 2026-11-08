@@ -97,7 +97,7 @@ again.
 **Samsung Gallery's Recycle bin:** Not yet checked.
 
 **Settings → Reset decisions** makes the photos you kept show up again. Trashed
-items stay in the trash.
+items stay in the trash. Photos waiting to be trashed are put back in the queue too.
 
 ## Privacy
 
@@ -169,3 +169,4 @@ Run on a Samsung phone for the first release:
 - [ ] A trashed item no longer appears in the swipe queue or Start counts.
 - [ ] With Media management on, a left swipe shows no system dialog.
 - [ ] Thumbnails show on the Trashed page.
+- [ ] Trash an item, force-stop the app and reopen it: the Trashed page still lists it.
