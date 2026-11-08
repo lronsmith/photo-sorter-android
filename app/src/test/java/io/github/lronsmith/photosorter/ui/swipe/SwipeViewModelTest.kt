@@ -1,22 +1,35 @@
 package io.github.lronsmith.photosorter.ui.swipe
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.lronsmith.photosorter.decisions.DecisionSource
 import io.github.lronsmith.photosorter.decisions.DecisionSource.SWIPE
 import io.github.lronsmith.photosorter.decisions.DecisionState
 import io.github.lronsmith.photosorter.decisions.DecisionState.KEPT
 import io.github.lronsmith.photosorter.decisions.DecisionState.PENDING_TRASH
 import io.github.lronsmith.photosorter.decisions.DecisionState.TRASHED
+import io.github.lronsmith.photosorter.decisions.DecisionStore
 import io.github.lronsmith.photosorter.fakes.FakeDecisionStore
 import io.github.lronsmith.photosorter.fakes.FakeMediaSource
 import io.github.lronsmith.photosorter.fakes.FakeSettingsStore
 import io.github.lronsmith.photosorter.fakes.FakeTrasher
 import io.github.lronsmith.photosorter.fakes.testItem
+import io.github.lronsmith.photosorter.media.MediaSource
+import io.github.lronsmith.photosorter.media.TrashedItem
+import io.github.lronsmith.photosorter.model.MediaItem
 import io.github.lronsmith.photosorter.trash.RequestLauncher
 import io.github.lronsmith.photosorter.ui.swipe.SwipeDirection.LEFT
 import io.github.lronsmith.photosorter.ui.swipe.SwipeDirection.RIGHT
 import io.github.lronsmith.photosorter.ui.swipe.SwipeDirection.UP
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -42,10 +55,26 @@ class SwipeViewModelTest {
 
     @Before fun setUp() = Dispatchers.setMain(StandardTestDispatcher())
 
-    @After fun tearDown() = Dispatchers.resetMain()
+    /** Stands in for the application scope: outlives the ViewModel, runs on the test scheduler. */
+    private var workerScope: CoroutineScope? = null
 
-    private fun TestScope.loaded(): SwipeViewModel =
-        SwipeViewModel(media, decisions, settings, trasher).also { advanceUntilIdle() }
+    @After fun tearDown() {
+        workerScope?.cancel()
+        Dispatchers.resetMain()
+    }
+
+    private fun TestScope.worker(): CoroutineScope =
+        workerScope ?: CoroutineScope(StandardTestDispatcher(testScheduler) + Job()).also { workerScope = it }
+
+    private fun TestScope.loaded(store: DecisionStore = decisions): SwipeViewModel =
+        SwipeViewModel(media, store, settings, trasher, worker()).also { advanceUntilIdle() }
+
+    /** Clears [vm] the way Android does when its screen closes. */
+    private fun clear(vm: SwipeViewModel) {
+        val store = ViewModelStore()
+        ViewModelProvider.create(store, viewModelFactory { initializer { vm } })[SwipeViewModel::class]
+        store.clear()
+    }
 
     private val SwipeViewModel.ui: SwipeUiState get() = state.value
 
@@ -272,5 +301,106 @@ class SwipeViewModelTest {
         vm.onSwipe(LEFT, ok); advanceUntilIdle()
         assertEquals(PENDING_TRASH, decisions.rows.getValue(2).state)
         assertEquals(listOf(listOf(1L)), trasher.trashCalls)
+    }
+
+    @Test fun queuedDecisionsAreWrittenAfterTheViewModelIsCleared() = runTest {
+        trasher.instant = true
+        val gate = CompletableDeferred<Unit>()
+        trasher.gate = gate
+        val vm = loaded()
+        vm.onSwipe(LEFT, ok) // instant trash of 1, held at the gate
+        trasher.instant = false
+        vm.onSwipe(RIGHT, ok) // KEPT 2, queued
+        vm.onSwipe(LEFT, ok) // PENDING_TRASH 3, queued
+        advanceUntilIdle()
+        clear(vm) // back pressed: the launcher now fails, but the system already trashed 1
+        trasher.trashResult = { emptyList() }
+        media.trashed[1] = TrashedItem(items[0], expiresAt = 0)
+        gate.complete(Unit); advanceUntilIdle()
+        assertEquals(mapOf(1L to TRASHED, 2L to KEPT, 3L to PENDING_TRASH), states())
+    }
+
+    @Test fun failedInstantTrashFoundInSystemTrashIsRecordedTrashed() = runTest {
+        trasher.instant = true
+        trasher.trashResult = { emptyList() }
+        media.trashed[1] = TrashedItem(items[0], expiresAt = 0)
+        val vm = loaded()
+        vm.onSwipe(LEFT, ok); advanceUntilIdle()
+        assertEquals(TRASHED, decisions.rows.getValue(1).state)
+        assertNull(vm.ui.message)
+        vm.onUndo(ok); advanceUntilIdle() // it really is in the trash, so undo restores it
+        assertEquals(listOf(listOf(1L)), trasher.restoreCalls)
+    }
+
+    @Test fun failedBatchChunkFoundInSystemTrashIsRecordedTrashed() = runTest {
+        val vm = loaded()
+        repeat(2) { vm.onSwipe(LEFT, ok) }
+        advanceUntilIdle()
+        trasher.trashResult = { emptyList() }
+        media.trashed[2] = TrashedItem(items[1], expiresAt = 0)
+        vm.onTrashPending(ok); advanceUntilIdle()
+        assertEquals(mapOf(1L to PENDING_TRASH, 2L to TRASHED), states())
+        assertEquals(BATCH_FAILED_MESSAGE, vm.ui.message)
+    }
+
+    @Test fun pendingOutsideTheLibraryIsNotCountedOrTrashed() = runTest {
+        decisions.set(listOf(3L, 99L), PENDING_TRASH, SWIPE) // 99: deleted elsewhere / not visible
+        val vm = loaded()
+        assertEquals(1, vm.ui.pendingCount)
+        vm.onTrashPending(ok); advanceUntilIdle()
+        assertEquals(listOf(listOf(3L)), trasher.trashCalls)
+        assertEquals(mapOf(3L to TRASHED, 99L to PENDING_TRASH), states())
+        assertEquals(0, vm.ui.pendingCount)
+        assertNull(vm.ui.message)
+    }
+
+    @Test fun loadFailureOfAnItemSwipedMeanwhileDoesNotDropIt() = runTest {
+        trasher.instant = true
+        val vm = loaded()
+        vm.onLoadFailed(items[0]) // exists() not answered yet...
+        vm.onSwipe(LEFT, ok) // ...when 1 is trashed: it now reads as gone
+        media.missing += 1
+        advanceUntilIdle()
+        assertEquals(5, vm.ui.total)
+        assertEquals(1, vm.ui.decided)
+        media.missing -= 1
+        vm.onUndo(ok); advanceUntilIdle()
+        assertEquals(listOf(listOf(1L)), trasher.restoreCalls)
+        assertTrue(decisions.rows.isEmpty())
+        assertEquals(1L, vm.ui.current?.id)
+        assertEquals(0, vm.ui.decided)
+    }
+
+    @Test fun failingJobShowsMessageAndWorkerKeepsRunning() = runTest {
+        val store = FailingSetStore(decisions)
+        val vm = loaded(store)
+        store.fail = true
+        vm.onSwipe(RIGHT, ok); advanceUntilIdle()
+        assertEquals("Something went wrong. Please try again.", vm.ui.message)
+        store.fail = false
+        vm.onSwipe(RIGHT, ok); advanceUntilIdle()
+        assertEquals(mapOf(2L to KEPT), states())
+    }
+
+    @Test fun failingLoadShowsMessage() = runTest {
+        val vm = SwipeViewModel(FailingMediaSource, decisions, settings, trasher, worker())
+        advanceUntilIdle()
+        assertEquals("Something went wrong. Please try again.", vm.ui.message)
+        vm.onTrashPending(ok); advanceUntilIdle() // the worker is still alive
+        assertTrue(trasher.trashCalls.isEmpty())
+    }
+
+    /** [DecisionStore] whose [set] throws while [fail] is true. */
+    private class FailingSetStore(private val inner: FakeDecisionStore) : DecisionStore by inner {
+        var fail = false
+
+        override suspend fun set(mediaIds: Collection<Long>, state: DecisionState, source: DecisionSource) {
+            if (fail) throw IOException("disk full")
+            inner.set(mediaIds, state, source)
+        }
+    }
+
+    private object FailingMediaSource : MediaSource by FakeMediaSource() {
+        override suspend fun allItems(): List<MediaItem> = throw IOException("query failed")
     }
 }
