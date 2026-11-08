@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two photo cards being sorted: the one behind marked for the trash, the one in front kept. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="45"
+        android:pivotY="49"
+        android:rotation="-10">
+        <path
+            android:fillColor="#3A3E46"
+            android:pathData="M36,32 H54 A3,3 0 0 1 57,35 V63 A3,3 0 0 1 54,66 H36 A3,3 0 0 1 33,63 V35 A3,3 0 0 1 36,32 Z" />
+        <path
+            android:pathData="M37,36 L45,44 M45,36 L37,44"
+            android:strokeWidth="3"
+            android:strokeColor="#D64545"
+            android:strokeLineCap="round" />
+    </group>
+    <group
+        android:pivotX="63"
+        android:pivotY="59"
+        android:rotation="8">
+        <path
+            android:fillColor="#F2F3F5"
+            android:pathData="M54,42 H72 A3,3 0 0 1 75,45 V73 A3,3 0 0 1 72,76 H54 A3,3 0 0 1 51,73 V45 A3,3 0 0 1 54,42 Z" />
+        <path
+            android:pathData="M57,59.5 L61.5,64 L69.5,54.5"
+            android:strokeWidth="3.5"
+            android:strokeColor="#20B26B"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>
